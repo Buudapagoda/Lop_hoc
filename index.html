@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Quản Lý Lớp Học</title>
+    <style>
+        /* Màn hình chờ */
+        #splash-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f4f6f8; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.3s; }
+        .spinner { border: 4px solid #e0e0e0; border-top: 4px solid #2e7d32; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Hộp thoại Zalo */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000; display: none; align-items: center; justify-content: center; }
+        .modal-content { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; text-align: center; animation: popIn 0.3s; }
+        @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .zalo-btn { display: inline-block; background: #0068ff; color: white; padding: 12px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 15px; width: 100%; box-sizing: border-box; }
+        
+        /* Giao diện chính */
+        body { font-family: Arial, sans-serif; background: #f4f6f8; padding: 15px; margin: 0; }
+        .container { max-width: 850px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #2e7d32; }
+        .tab-buttons { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab-btn { flex: 1; padding: 12px; border: none; border-radius: 6px; cursor: pointer; background: #e0e0e0; font-weight: bold; }
+        .tab-btn.active { background: #2e7d32; color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .admin-box { background: #fff3e0; padding: 15px; border-radius: 6px; margin: 20px 0; border: 1px solid #ffe0b2; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+        th { background: #f5f5f5; }
+        input[type="checkbox"] { transform: scale(1.3); cursor: pointer; }
+        .action-btn { padding: 12px; background: #2e7d32; color: white; border: none; border-radius: 4px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 15px; }
+        .reg-form { background: #e8f5e9; padding: 20px; border-radius: 8px; }
+        .input-group { margin-bottom: 15px; }
+        input, select { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<div id="splash-screen"><div class="spinner"></div><div style="margin-top:20px; color:#2e7d32; font-weight:bold;">Đang tải hệ thống...</div></div>
+
+<div id="successModal" class="modal-overlay">
+    <div class="modal-content">
+        <h2 style="color: #2e7d32; margin-top: 0;">🎉 Thành công!</h2>
+        <p id="successMsg">Đăng ký thành công!</p>
+        <p style="color: #555;">Kính mời quý học viên tham gia nhóm Zalo của lớp để nhận thông báo:</p>
+        <a id="zaloLinkBtn" href="#" target="_blank" class="zalo-btn">💬 Tham gia nhóm Zalo</a>
+        <button onclick="document.getElementById('successModal').style.display='none'" style="background:#e0e0e0; border:none; padding:10px; border-radius:6px; width:100%; margin-top:10px; font-weight:bold; cursor:pointer;">Đóng</button>
+    </div>
+</div>
+
+<div class="container" id="main-content" style="display: none;">
+    <h2>🙏 Quản Lý Lớp Học</h2>
+    <div class="tab-buttons">
+        <button class="tab-btn active" onclick="switchTab('registerTab', this)">📝 Đăng Ký</button>
+        <button class="tab-btn" onclick="switchTab('attendanceTab', this)">✅ Điểm Danh</button>
+    </div>
+
+    <div id="registerTab" class="tab-content active">
+        <div class="reg-form">
+            <div class="input-group">
+                <label>1. Chọn lớp muốn đăng ký (*)</label>
+                <select id="regClass">
+                    <option value="">-- Nhấp để chọn lớp --</option>
+                    <option value="CamHoa">Lớp Cắm Hoa</option>
+                    <option value="PhongThuy">Lớp Phong Thuỷ</option>
+                    <option value="HSK1">Lớp HSK 1</option>
+                    <option value="HSK2">Lớp HSK 2</option>
+                    <option value="HSK4">Lớp HSK 4</option>
+                    <option value="HanCo">Lớp Hán Cổ</option>
+                    <option value="TiengAnh">Lớp Tiếng Anh</option>
+                </select>
+            </div>
+            <div class="input-group"><label>2. Họ và Tên (*)</label><input type="text" id="regName" placeholder="vd: Nguyễn Ngọc Dương"></div>
+            <div class="input-group"><label>3. Số điện thoại (*)</label><input type="tel" id="regPhone" placeholder="vd: 0935994..."></div>
+            <div class="input-group"><label>4. Tên Zalo</label><input type="text" id="regZalo" placeholder="vd: Đồng Thịnh"></div>
+            <button class="action-btn" id="btnSubmitReg" onclick="submitRegistration()" style="background:#f57c00; font-size: 18px;">XÁC NHẬN ĐĂNG KÝ</button>
+        </div>
+    </div>
+
+    <div id="attendanceTab" class="tab-content">
+        <div style="background:#f5f5f5; padding:15px; border-radius:6px;">
+            <label>Lớp học:</label>
+            <select id="classSelect" onchange="loadData()">
+                <option value="">-- Chọn lớp --</option>
+                <option value="CamHoa">Lớp Cắm Hoa</option>
+                <option value="PhongThuy">Lớp Phong Thuỷ</option>
+                <option value="HSK1">Lớp HSK 1</option>
+                <option value="HSK2">Lớp HSK 2</option>
+                <option value="HSK4">Lớp HSK 4</option>
+                <option value="HanCo">Lớp Hán Cổ</option>
+                <option value="TiengAnh">Lớp Tiếng Anh</option>
+            </select>
+            <label style="margin-top:10px; display:block;">Ngày học:</label>
+            <input type="date" id="dateSelect">
+        </div>
+        <div class="admin-box">
+            <label>Mật khẩu Quản lý:</label>
+            <div style="display:flex; gap:10px; margin-top:5px;"><input type="password" id="adminPass"><button onclick="unlockAdmin()" style="width:100px; background:#2e7d32; color:white; border:none; border-radius:4px;">Mở</button></div>
+        </div>
+        <div id="loading" style="display:none; text-align:center;">Đang kết nối cơ sở dữ liệu...</div>
+        <div style="overflow-x:auto;"><table id="studentTable" style="display:none;"><thead><tr><th>STT</th><th>Tên Zalo</th><th id="flowerHeader" style="display:none;">Tiền Hoa</th><th>Điểm Danh</th></tr></thead><tbody id="studentList"></tbody></table></div>
+        <button id="saveBtn" class="action-btn" style="display:none;" onclick="submitAttendance()">Lưu Dữ Liệu</button>
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // ⚠️ QUAN TRỌNG: DÁN LINK WEB APP CỦA GOOGLE VÀO ĐÂY
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyP9Y0ak1HujaXUYJJvQ9NOChMlU53OdIz03sQdEp9zPtg1Q06liNjxfMkE23vgYijI/exec";
+    // ==========================================
+
+    const ZALO_LINKS = {
+        "CamHoa": "https://zalo.me/g/mkuyhsgrktatbr0tfqsg",
+        "PhongThuy": "https://zalo.me/g/tosdnf603"
+    };
+
+    const SECRET_PASSWORD = "123"; 
+    let currentStudents = [];
+    let isAdmin = false;
+
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            document.getElementById('splash-screen').style.opacity = '0';
+            setTimeout(function() { 
+                document.getElementById('splash-screen').style.display = 'none'; 
+                document.getElementById('main-content').style.display = 'block'; 
+            }, 300);
+        }, 300);
+    });
+
+    document.getElementById('dateSelect').valueAsDate = new Date();
+    document.getElementById('dateSelect').addEventListener('change', loadData);
+
+    function switchTab(id, btn) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        btn.classList.add('active');
+    }
+
+    // --- SỬ DỤNG FETCH API ĐỂ LẤY DỮ LIỆU TỪ GOOGLE SHEETS ---
+    function loadData() {
+        const className = document.getElementById('classSelect').value;
+        const dateRaw = document.getElementById('dateSelect').value;
+        if (!className || !dateRaw) return;
+        
+        const dateString = dateRaw.split('-').reverse().join('/');
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('studentTable').style.display = 'none';
+        
+        // Gọi API bằng phương thức GET
+        fetch(`${SCRIPT_URL}?action=getStudents&className=${className}&dateString=${dateString}`)
+            .then(response => response.json())
+            .then(students => {
+                currentStudents = students;
+                renderTable(className);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('studentTable').style.display = 'table';
+            })
+            .catch(error => {
+                alert("Lỗi kết nối máy chủ Google!");
+                document.getElementById('loading').style.display = 'none';
+            });
+    }
+
+    function renderTable(className) {
+        const tbody = document.getElementById('studentList');
+        const fHeader = document.getElementById('flowerHeader');
+        tbody.innerHTML = '';
+        fHeader.style.display = (className === "CamHoa") ? "table-cell" : "none";
+        currentStudents.forEach((s, i) => {
+            const tr = document.createElement('tr');
+            const disabled = isAdmin ? '' : 'disabled';
+            let flowerCol = (className === "CamHoa") ? `<td style="text-align:center;"><input type="checkbox" class="chk-flower" data-row="${s.rowIdx}" ${s.isFlowerPaid ? 'checked' : ''} ${disabled}></td>` : '';
+            let mainName = s.zalo ? s.zalo : s.name;
+            tr.innerHTML = `<td>${i + 1}</td><td><strong>${mainName}</strong><br><small style="color:gray">${s.name} - ${s.phone}</small></td>${flowerCol}<td style="text-align:center;"><input type="checkbox" class="chk-present" data-row="${s.rowIdx}" ${s.isPresent ? 'checked' : ''} ${disabled}></td>`;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function unlockAdmin() {
+        if (document.getElementById('adminPass').value === SECRET_PASSWORD) {
+            isAdmin = true;
+            document.getElementById('saveBtn').style.display = 'block';
+            document.querySelectorAll('input[type="checkbox"]').forEach(c => c.disabled = false);
+            alert("Đã mở khóa!");
+        } else { alert("Sai mật khẩu!"); }
+    }
+
+    // --- SỬ DỤNG FETCH API ĐỂ GỬI DỮ LIỆU ĐĂNG KÝ ---
+    function submitRegistration() {
+        const c = document.getElementById('regClass').value;
+        const n = document.getElementById('regName').value;
+        const p = document.getElementById('regPhone').value;
+        const z = document.getElementById('regZalo').value;
+        if(!c || !n || !p) return alert("Vui lòng nhập đủ thông tin!");
+        
+        const btn = document.getElementById('btnSubmitReg');
+        btn.innerText = "ĐANG GỬI..."; btn.disabled = true;
+        
+        // Cấu trúc dữ liệu gửi đi (Chuyển thành text/plain để tránh lỗi CORS)
+        const payload = {
+            action: 'register',
+            className: c, name: n, phone: p, zalo: z
+        };
+
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            btn.innerText = "XÁC NHẬN ĐĂNG KÝ"; btn.disabled = false;
+            const link = ZALO_LINKS[c] || "https://zalo.me";
+            document.getElementById('zaloLinkBtn').href = link;
+            document.getElementById('successMsg').innerText = data.message;
+            document.getElementById('successModal').style.display = 'flex';
+            
+            document.getElementById('regName').value = '';
+            document.getElementById('regPhone').value = '';
+            document.getElementById('regZalo').value = '';
+        });
+    }
+
+    // --- SỬ DỤNG FETCH API ĐỂ LƯU ĐIỂM DANH ---
+    function submitAttendance() {
+        const className = document.getElementById('classSelect').value;
+        const dateRaw = document.getElementById('dateSelect').value;
+        const dateString = dateRaw.split('-').reverse().join('/');
+        const btn = document.getElementById('saveBtn');
+        btn.innerText = "ĐANG LƯU..."; btn.disabled = true;
+        
+        const attendanceData = [];
+        document.querySelectorAll('#studentList tr').forEach(tr => {
+            const chkP = tr.querySelector('.chk-present');
+            const chkF = tr.querySelector('.chk-flower');
+            if (chkP) attendanceData.push({ rowIdx: parseInt(chkP.getAttribute('data-row')), present: chkP.checked, flowerFee: chkF ? chkF.checked : false });
+        });
+
+        const payload = {
+            action: 'saveAttendance',
+            className: className,
+            dateString: dateString,
+            attendanceData: attendanceData
+        };
+
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message); 
+            btn.innerText = "Lưu Dữ Liệu"; 
+            btn.disabled = false; 
+        });
+    }
+</script>
+</body>
+</html>
