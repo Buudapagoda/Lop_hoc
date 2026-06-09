@@ -12,9 +12,10 @@
         
         /* Hộp thoại Zalo */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000; display: none; align-items: center; justify-content: center; }
-        .modal-content { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; text-align: center; animation: popIn 0.3s; }
+        .modal-content { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 430px; text-align: center; animation: popIn 0.3s; }
         @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         .zalo-btn { display: inline-block; background: #0068ff; color: white; padding: 12px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 15px; width: 100%; box-sizing: border-box; }
+        .close-btn { background:#e0e0e0; border:none; padding:10px; border-radius:6px; width:100%; margin-top:10px; font-weight:bold; cursor:pointer; }
         
         /* Giao diện chính */
         body { font-family: Arial, sans-serif; background: #f4f6f8; padding: 15px; margin: 0; }
@@ -31,9 +32,16 @@
         th { background: #f5f5f5; }
         input[type="checkbox"] { transform: scale(1.3); cursor: pointer; }
         .action-btn { padding: 12px; background: #2e7d32; color: white; border: none; border-radius: 4px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 15px; }
+        .action-btn:disabled { background:#9e9e9e !important; cursor:not-allowed; }
         .reg-form { background: #e8f5e9; padding: 20px; border-radius: 8px; }
         .input-group { margin-bottom: 15px; }
         input, select { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        label { font-weight: bold; display:block; margin-bottom:5px; }
+        .schedule-box { display:none; background:#fffde7; border:1px solid #fbc02d; border-radius:8px; padding:12px; margin:10px 0 15px 0; line-height:1.5; }
+        .schedule-title { color:#e65100; font-weight:bold; margin-bottom:4px; }
+        .small-note { color:#555; font-size:13px; margin-top:8px; }
+        .success-info { background:#e8f5e9; border-radius:8px; padding:12px; text-align:left; margin:12px 0; line-height:1.6; }
+        .error-text { color:#c62828; font-weight:bold; }
     </style>
 </head>
 <body>
@@ -42,11 +50,12 @@
 
 <div id="successModal" class="modal-overlay">
     <div class="modal-content">
-        <h2 style="color: #2e7d32; margin-top: 0;">🎉 Thành công!</h2>
-        <p id="successMsg">Đăng ký thành công!</p>
-        <p style="color: #555;">Kính mời quý học viên tham gia nhóm Zalo của lớp để nhận thông báo:</p>
-        <a id="zaloLinkBtn" href="#" target="_blank" class="zalo-btn">💬 Tham gia nhóm Zalo</a>
-        <button onclick="document.getElementById('successModal').style.display='none'" style="background:#e0e0e0; border:none; padding:10px; border-radius:6px; width:100%; margin-top:10px; font-weight:bold; cursor:pointer;">Đóng</button>
+        <h2 style="color: #2e7d32; margin-top: 0;">🎉 Đăng ký thành công!</h2>
+        <p id="successMsg">Thông tin đã được lưu.</p>
+        <div id="successInfo" class="success-info"></div>
+        <p style="color: #555;">Sau khi đã đăng ký thành công, kính mời quý học viên bấm nút bên dưới để tham gia nhóm lớp:</p>
+        <a id="zaloLinkBtn" href="#" target="_blank" class="zalo-btn">💬 Tham gia nhóm lớp</a>
+        <button onclick="closeSuccessModal()" class="close-btn">Đóng</button>
     </div>
 </div>
 
@@ -61,10 +70,10 @@
         <div class="reg-form">
             <div class="input-group">
                 <label>1. Chọn lớp muốn đăng ký (*)</label>
-                <select id="regClass">
+                <select id="regClass" onchange="showSchedule('regClass', 'regScheduleBox')">
                     <option value="">-- Nhấp để chọn lớp --</option>
                     <option value="CamHoa">Lớp Cắm Hoa</option>
-                    <option value="PhongThuy">Lớp Phong Thuỷ</option>
+                    <option value="XemNgay">Lớp Phong Thuỷ Xem Ngày Giờ</option>
                     <option value="HSK1">Lớp HSK 1</option>
                     <option value="HSK2">Lớp HSK 2</option>
                     <option value="HSK4">Lớp HSK 4</option>
@@ -72,9 +81,11 @@
                     <option value="TiengAnh">Lớp Tiếng Anh</option>
                 </select>
             </div>
+            <div id="regScheduleBox" class="schedule-box"></div>
             <div class="input-group"><label>2. Họ và Tên (*)</label><input type="text" id="regName" placeholder="vd: Nguyễn Ngọc Dương"></div>
             <div class="input-group"><label>3. Số điện thoại (*)</label><input type="tel" id="regPhone" placeholder="vd: 0935994..."></div>
             <div class="input-group"><label>4. Tên Zalo</label><input type="text" id="regZalo" placeholder="vd: Đồng Thịnh"></div>
+            <div class="small-note">Lưu ý: Link nhóm lớp chỉ hiện sau khi hệ thống lưu đăng ký thành công.</div>
             <button class="action-btn" id="btnSubmitReg" onclick="submitRegistration()" style="background:#f57c00; font-size: 18px;">XÁC NHẬN ĐĂNG KÝ</button>
         </div>
     </div>
@@ -82,16 +93,17 @@
     <div id="attendanceTab" class="tab-content">
         <div style="background:#f5f5f5; padding:15px; border-radius:6px;">
             <label>Lớp học:</label>
-            <select id="classSelect" onchange="loadData()">
+            <select id="classSelect" onchange="showSchedule('classSelect', 'attendanceScheduleBox'); loadData();">
                 <option value="">-- Chọn lớp --</option>
                 <option value="CamHoa">Lớp Cắm Hoa</option>
-                <option value="PhongThuy">Lớp Phong Thuỷ</option>
+                <option value="XemNgay">Lớp Phong Thuỷ Xem Ngày Giờ</option>
                 <option value="HSK1">Lớp HSK 1</option>
                 <option value="HSK2">Lớp HSK 2</option>
                 <option value="HSK4">Lớp HSK 4</option>
                 <option value="HanCo">Lớp Hán Cổ</option>
                 <option value="TiengAnh">Lớp Tiếng Anh</option>
             </select>
+            <div id="attendanceScheduleBox" class="schedule-box"></div>
             <label style="margin-top:10px; display:block;">Ngày học:</label>
             <input type="date" id="dateSelect">
         </div>
@@ -111,9 +123,31 @@
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyP9Y0ak1HujaXUYJJvQ9NOChMlU53OdIz03sQdEp9zPtg1Q06liNjxfMkE23vgYijI/exec";
     // ==========================================
 
+    // Lưu ý: Lớp Phong Thuỷ Xem Ngày Giờ dùng mã XemNgay để khớp tên sheet Excel/Google Sheet.
+    const CLASS_NAMES = {
+        "CamHoa": "Lớp Cắm Hoa",
+        "XemNgay": "Lớp Phong Thuỷ Xem Ngày Giờ",
+        "HSK1": "Lớp HSK 1",
+        "HSK2": "Lớp HSK 2",
+        "HSK4": "Lớp HSK 4",
+        "HanCo": "Lớp Hán Cổ",
+        "TiengAnh": "Lớp Tiếng Anh"
+    };
+
+    const CLASS_SCHEDULES = {
+        "CamHoa": "Tối Thứ 7 và Chủ Nhật lúc 18h00",
+        "XemNgay": "Thời khóa biểu sẽ được Ban Tổ Chức thông báo sau",
+        "TiengAnh": "Thứ 3 và Thứ 5 hằng tuần, từ 13h30 đến 17h00",
+        "HanCo": "Tối Thứ 5, từ 18h30 đến 20h30",
+        "HSK1": "Tối Thứ 4, từ 18h00 đến 20h00",
+        "HSK2": "Thời khóa biểu sẽ được Ban Tổ Chức thông báo sau",
+        "HSK4": "Thời khóa biểu sẽ được Ban Tổ Chức thông báo sau"
+    };
+
     const ZALO_LINKS = {
         "CamHoa": "https://zalo.me/g/mkuyhsgrktatbr0tfqsg",
-        "PhongThuy": "https://zalo.me/g/tosdnf603"
+        "XemNgay": "https://zalo.me/g/tosdnf603",
+        "TiengAnh": "https://zalo.me/g/ctlenilynoivemqlqtpt"
     };
 
     const SECRET_PASSWORD = "123"; 
@@ -140,6 +174,35 @@
         btn.classList.add('active');
     }
 
+    function showSchedule(selectId, boxId) {
+        const className = document.getElementById(selectId).value;
+        const box = document.getElementById(boxId);
+        if (!className) {
+            box.style.display = 'none';
+            box.innerHTML = '';
+            return;
+        }
+
+        const title = CLASS_NAMES[className] || className;
+        const schedule = CLASS_SCHEDULES[className] || "Thời khóa biểu sẽ được Ban Tổ Chức thông báo sau";
+        box.innerHTML = `<div class="schedule-title">📅 Thời khóa biểu: ${title}</div><div>${schedule}</div>`;
+        box.style.display = 'block';
+    }
+
+    function closeSuccessModal() {
+        document.getElementById('successModal').style.display = 'none';
+    }
+
+    function isRegisterSuccess(data) {
+        if (!data) return false;
+        if (data.success === true) return true;
+        if (data.status && String(data.status).toLowerCase() === 'success') return true;
+        if (data.result && String(data.result).toLowerCase() === 'success') return true;
+        if (data.error) return false;
+        // Nếu Apps Script cũ chỉ trả về { message: "..." } thì xem là thành công khi đã nhận được JSON hợp lệ.
+        return !!data.message;
+    }
+
     // --- SỬ DỤNG FETCH API ĐỂ LẤY DỮ LIỆU TỪ GOOGLE SHEETS ---
     function loadData() {
         const className = document.getElementById('classSelect').value;
@@ -149,18 +212,21 @@
         const dateString = dateRaw.split('-').reverse().join('/');
         document.getElementById('loading').style.display = 'block';
         document.getElementById('studentTable').style.display = 'none';
+        document.getElementById('studentList').innerHTML = '';
         
-        // Gọi API bằng phương thức GET
-        fetch(`${SCRIPT_URL}?action=getStudents&className=${className}&dateString=${dateString}`)
-            .then(response => response.json())
+        fetch(`${SCRIPT_URL}?action=getStudents&className=${encodeURIComponent(className)}&dateString=${encodeURIComponent(dateString)}`)
+            .then(response => {
+                if (!response.ok) throw new Error('Máy chủ không phản hồi đúng.');
+                return response.json();
+            })
             .then(students => {
-                currentStudents = students;
+                currentStudents = Array.isArray(students) ? students : [];
                 renderTable(className);
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('studentTable').style.display = 'table';
             })
             .catch(error => {
-                alert("Lỗi kết nối máy chủ Google!");
+                alert("Lỗi kết nối máy chủ Google! Vui lòng kiểm tra lại Web App hoặc mạng internet.");
                 document.getElementById('loading').style.display = 'none';
             });
     }
@@ -170,12 +236,21 @@
         const fHeader = document.getElementById('flowerHeader');
         tbody.innerHTML = '';
         fHeader.style.display = (className === "CamHoa") ? "table-cell" : "none";
+
+        if (!currentStudents || currentStudents.length === 0) {
+            const tr = document.createElement('tr');
+            const colspan = (className === "CamHoa") ? 4 : 3;
+            tr.innerHTML = `<td colspan="${colspan}" style="text-align:center; color:#777;">Chưa có học viên đăng ký lớp này.</td>`;
+            tbody.appendChild(tr);
+            return;
+        }
+
         currentStudents.forEach((s, i) => {
             const tr = document.createElement('tr');
             const disabled = isAdmin ? '' : 'disabled';
             let flowerCol = (className === "CamHoa") ? `<td style="text-align:center;"><input type="checkbox" class="chk-flower" data-row="${s.rowIdx}" ${s.isFlowerPaid ? 'checked' : ''} ${disabled}></td>` : '';
             let mainName = s.zalo ? s.zalo : s.name;
-            tr.innerHTML = `<td>${i + 1}</td><td><strong>${mainName}</strong><br><small style="color:gray">${s.name} - ${s.phone}</small></td>${flowerCol}<td style="text-align:center;"><input type="checkbox" class="chk-present" data-row="${s.rowIdx}" ${s.isPresent ? 'checked' : ''} ${disabled}></td>`;
+            tr.innerHTML = `<td>${i + 1}</td><td><strong>${mainName || ''}</strong><br><small style="color:gray">${s.name || ''} - ${s.phone || ''}</small></td>${flowerCol}<td style="text-align:center;"><input type="checkbox" class="chk-present" data-row="${s.rowIdx}" ${s.isPresent ? 'checked' : ''} ${disabled}></td>`;
             tbody.appendChild(tr);
         });
     }
@@ -192,18 +267,23 @@
     // --- SỬ DỤNG FETCH API ĐỂ GỬI DỮ LIỆU ĐĂNG KÝ ---
     function submitRegistration() {
         const c = document.getElementById('regClass').value;
-        const n = document.getElementById('regName').value;
-        const p = document.getElementById('regPhone').value;
-        const z = document.getElementById('regZalo').value;
-        if(!c || !n || !p) return alert("Vui lòng nhập đủ thông tin!");
+        const n = document.getElementById('regName').value.trim();
+        const p = document.getElementById('regPhone').value.trim();
+        const z = document.getElementById('regZalo').value.trim();
+        if(!c || !n || !p) return alert("Vui lòng nhập đủ thông tin bắt buộc: Lớp học, Họ tên và Số điện thoại!");
         
         const btn = document.getElementById('btnSubmitReg');
-        btn.innerText = "ĐANG GỬI..."; btn.disabled = true;
+        btn.innerText = "ĐANG GỬI..."; 
+        btn.disabled = true;
+        document.getElementById('zaloLinkBtn').style.display = 'none';
+        document.getElementById('zaloLinkBtn').href = '#';
         
-        // Cấu trúc dữ liệu gửi đi (Chuyển thành text/plain để tránh lỗi CORS)
         const payload = {
             action: 'register',
-            className: c, name: n, phone: p, zalo: z
+            className: c,
+            name: n,
+            phone: p,
+            zalo: z
         };
 
         fetch(SCRIPT_URL, {
@@ -211,17 +291,51 @@
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify(payload)
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) throw new Error('Không gửi được dữ liệu.');
+            return response.json();
+        })
         .then(data => {
-            btn.innerText = "XÁC NHẬN ĐĂNG KÝ"; btn.disabled = false;
-            const link = ZALO_LINKS[c] || "https://zalo.me";
-            document.getElementById('zaloLinkBtn').href = link;
-            document.getElementById('successMsg').innerText = data.message;
+            btn.innerText = "XÁC NHẬN ĐĂNG KÝ"; 
+            btn.disabled = false;
+
+            if (!isRegisterSuccess(data)) {
+                const msg = data && data.message ? data.message : "Đăng ký chưa thành công. Vui lòng thử lại!";
+                alert(msg);
+                return;
+            }
+
+            const classTitle = CLASS_NAMES[c] || c;
+            const schedule = CLASS_SCHEDULES[c] || "Thời khóa biểu sẽ được Ban Tổ Chức thông báo sau";
+            const link = ZALO_LINKS[c];
+
+            document.getElementById('successMsg').innerText = data.message || "Thông tin đăng ký đã được lưu vào danh sách.";
+            document.getElementById('successInfo').innerHTML = `
+                <div><strong>Họ tên:</strong> ${n}</div>
+                <div><strong>Lớp đăng ký:</strong> ${classTitle}</div>
+                <div><strong>Thời gian học:</strong> ${schedule}</div>
+            `;
+
+            const zaloBtn = document.getElementById('zaloLinkBtn');
+            if (link) {
+                zaloBtn.href = link;
+                zaloBtn.style.display = 'inline-block';
+            } else {
+                zaloBtn.href = '#';
+                zaloBtn.style.display = 'none';
+                document.getElementById('successInfo').innerHTML += `<div class="error-text">Lớp này chưa có link nhóm Zalo. Ban Tổ Chức sẽ thông báo sau.</div>`;
+            }
+
             document.getElementById('successModal').style.display = 'flex';
-            
             document.getElementById('regName').value = '';
             document.getElementById('regPhone').value = '';
             document.getElementById('regZalo').value = '';
+        })
+        .catch(error => {
+            btn.innerText = "XÁC NHẬN ĐĂNG KÝ"; 
+            btn.disabled = false;
+            document.getElementById('zaloLinkBtn').style.display = 'none';
+            alert("Đăng ký chưa thành công nên chưa hiện link nhóm. Vui lòng kiểm tra mạng hoặc Google Sheet rồi thử lại!");
         });
     }
 
@@ -229,9 +343,12 @@
     function submitAttendance() {
         const className = document.getElementById('classSelect').value;
         const dateRaw = document.getElementById('dateSelect').value;
+        if (!className || !dateRaw) return alert("Vui lòng chọn lớp học và ngày học!");
+
         const dateString = dateRaw.split('-').reverse().join('/');
         const btn = document.getElementById('saveBtn');
-        btn.innerText = "ĐANG LƯU..."; btn.disabled = true;
+        btn.innerText = "ĐANG LƯU..."; 
+        btn.disabled = true;
         
         const attendanceData = [];
         document.querySelectorAll('#studentList tr').forEach(tr => {
@@ -252,11 +369,19 @@
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify(payload)
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) throw new Error('Không lưu được dữ liệu.');
+            return response.json();
+        })
         .then(data => {
-            alert(data.message); 
+            alert(data.message || "Đã lưu dữ liệu điểm danh!"); 
             btn.innerText = "Lưu Dữ Liệu"; 
             btn.disabled = false; 
+        })
+        .catch(error => {
+            alert("Chưa lưu được dữ liệu điểm danh. Vui lòng kiểm tra lại kết nối Google Sheet!");
+            btn.innerText = "Lưu Dữ Liệu";
+            btn.disabled = false;
         });
     }
 </script>
